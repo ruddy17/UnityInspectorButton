@@ -1,7 +1,9 @@
 {
     "name": "InspectorButton.Editor",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "InspectorButton"
+    ],
     "includePlatforms": [
         "Editor"
     ],
