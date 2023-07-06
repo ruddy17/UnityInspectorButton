@@ -1,2 +1,2 @@
 # UnityInspectorButton
-Allow to create buttons binded to methods for Unity Components.
+It extends the Unity Inspector UI by allowing you to turn your methods into clickable buttons.
