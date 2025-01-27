@@ -1,49 +1,58 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
-using UnityEditor;
 using UnityEngine;
+using UnityEditor;
+using System;
+using System.Reflection;
+using System.Linq;
 
-[CustomPropertyDrawer(typeof(InspectorButton))]
-public class InspectorButtonDrawer : PropertyDrawer {
-
-    public override bool CanCacheInspectorGUI(SerializedProperty property) {
-        return true;
-    }
-
-    public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
-        var targets = property.serializedObject.targetObjects;
-        if (targets == null || targets.Length == 0)
-            return;
-
-        var methodName = property.name.TrimStart('_');
-        var declaringType = this.fieldInfo.DeclaringType;
-        var targetMethods = new List<MethodInfo>(targets.Length);
-        foreach (var target in targets) {
-            var targetMethod = declaringType.GetMethod(methodName,
-                    BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
-
-            if (targetMethod != null)
-                targetMethods.Add(targetMethod);
+namespace Antilatency {
+    [CustomPropertyDrawer(typeof(InspectorButton))]
+    public class InspectorButtonDrawer : PropertyDrawer {
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) {
+            return EditorGUIUtility.singleLineHeight;
         }
 
-        if (targetMethods.Count != targets.Length) {
-            var msg = string.Format("Method '{0}' not found", methodName);
-            EditorGUI.HelpBox(position, msg, MessageType.Error);
-            return;
+        private Action delayedAction;
+        public void delay() {
+            delayedAction();
         }
 
-        position.xMin += EditorGUIUtility.labelWidth;
+        public override void OnGUI(Rect pos, SerializedProperty prop, GUIContent label) {
 
-        var nicerName = ObjectNames.NicifyVariableName(methodName);
-        if (GUI.Button(position, nicerName)) {
-            for (int i = 0; i < targets.Length; i++) {
-                targetMethods[i].Invoke(targets[i], null);
+            SerializedObject O = prop.GetType().GetField("m_SerializedObject", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(prop) as SerializedObject;
+            var TargetObjects = O.targetObjects;
+
+            string MethodName = prop.name;
+            char[] charsToTrim = { '_' };
+            MethodName = MethodName.Trim(charsToTrim);
+            MethodInfo TargetMethod = TargetObjects[0].GetType().GetMethods()
+                .Where(x => x.Name == MethodName)
+                .Where(x => x.ReturnType == typeof(void))
+                .Where(x => x.GetParameters().Length == 0)
+                .FirstOrDefault();
+
+            if (TargetMethod == null) {
+                GUI.color = Color.red;
+                GUI.Label(pos, "Method " + MethodName + " not found.");
+                GUI.color = Color.white;
+                return;
             }
 
-            // In most use cases it's handy to repaint gizmos after
-            // the button clicked.
-            SceneView.RepaintAll();
+            SerializedProperty buttonColorProperty = O.FindProperty(prop.propertyPath + ".color");
+            Color buttonColor = buttonColorProperty.colorValue;
+            if (buttonColor == new Color(0, 0, 0, 0)) buttonColor = Color.white;
+            GUI.color = buttonColor;
+
+            if (GUI.Button(pos, ObjectNames.NicifyVariableName(MethodName))) {
+                delayedAction = () => {
+                    foreach (var o in TargetObjects) {
+                        TargetMethod.Invoke(o, new object[0]);
+                    }
+                    SceneView.RepaintAll();
+                };
+                EditorApplication.delayCall += delay;
+            }
+
+            GUI.color = Color.white;
         }
     }
 }
-
