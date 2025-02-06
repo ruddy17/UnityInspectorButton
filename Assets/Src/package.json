@@ -1,7 +1,7 @@
 {
   "name": "com.petrsevostianov.unityinspectorbutton",
   "displayName": "InspectorButton",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "author": "petrSevostianov",
   "homepage": "https://github.com/petrSevostianov/UnityInspectorButton",
   "description": "It extends the Unity Inspector UI by allowing you to turn your methods into clickable buttons.",
